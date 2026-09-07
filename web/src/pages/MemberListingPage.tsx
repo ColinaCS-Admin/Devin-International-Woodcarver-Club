@@ -29,21 +29,12 @@ export function MemberListingPage() {
 
   useEffect(load, [load]);
 
-  async function changeStatus(member: Member, nextActiveInd: string) {
-    const updated = await request<Member>(`/members/${member.memberId}`, {
+  async function changeStatus(memberId: number, nextActiveInd: string) {
+    await request<Member>(`/members/${memberId}`, {
       method: 'PATCH',
       body: { activeInd: nextActiveInd },
     });
-    setData((current) =>
-      current
-        ? {
-            ...current,
-            items: current.items.map((item) =>
-              item.memberId === updated.memberId ? updated : item,
-            ),
-          }
-        : current,
-    );
+    load();
   }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
@@ -137,7 +128,7 @@ export function MemberListingPage() {
                     aria-label={`Active status for ${member.memberAlias}`}
                     value={member.activeInd}
                     onChange={(event) => {
-                      void changeStatus(member, event.target.value);
+                      void changeStatus(member.memberId, event.target.value);
                     }}
                   >
                     {Object.entries(ACTIVE_IND_LABELS).map(([code, label]) => (
