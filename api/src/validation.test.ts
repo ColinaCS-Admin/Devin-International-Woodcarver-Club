@@ -10,6 +10,8 @@ const validMember = {
   telephoneNumber1: '+1-555-0101',
   telephoneType1: 'Mobile',
   addressLine1: '2 Workshop Lane',
+  city: 'Portland',
+  postalCode: '97205',
   stateProvinceCode: 'US-OR',
   countryCode: 'US',
   memberTierCode: 'Advanced',
@@ -26,6 +28,10 @@ describe('createMemberSchema', () => {
     expect(() => parse(createMemberSchema, { ...validMember, stateProvinceCode: 'US' })).toThrow(
       HttpError,
     );
+  });
+
+  it('requires a city', () => {
+    expect(() => parse(createMemberSchema, { ...validMember, city: '' })).toThrow(HttpError);
   });
 
   it('requires at least one craft skill', () => {

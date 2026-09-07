@@ -16,6 +16,8 @@ export interface Member {
   telephoneType2: string | null;
   addressLine1: string;
   addressLine2: string | null;
+  city: string;
+  postalCode: string | null;
   stateProvinceCode: string;
   stateProvinceDesc: string;
   countryCode: string;

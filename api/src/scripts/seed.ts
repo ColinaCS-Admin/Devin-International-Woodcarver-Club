@@ -90,6 +90,8 @@ interface DemoMember {
   email: string;
   phone: string;
   address: string;
+  city: string;
+  postalCode?: string;
   state: string;
   country: string;
   tier: 'Basic' | 'Advanced' | 'Lifetime';
@@ -106,6 +108,8 @@ const DEMO_MEMBERS: DemoMember[] = [
     email: 'admin@woodcarvers.example',
     phone: '+1-555-0100',
     address: '1 Guild Hall',
+    city: 'Portland',
+    postalCode: '97205',
     state: 'US-OR',
     country: 'US',
     tier: 'Lifetime',
@@ -120,6 +124,8 @@ const DEMO_MEMBERS: DemoMember[] = [
     email: 'bruno@woodcarvers.example',
     phone: '+420-555-0111',
     address: '14 Karlova',
+    city: 'Prague',
+    postalCode: '110 00',
     state: 'CZ-10',
     country: 'CZ',
     tier: 'Advanced',
@@ -132,6 +138,8 @@ const DEMO_MEMBERS: DemoMember[] = [
     email: 'mei@woodcarvers.example',
     phone: '+81-555-0122',
     address: '3-2-1 Sakura',
+    city: 'Tokyo',
+    postalCode: '150-0001',
     state: 'JP-13',
     country: 'JP',
     tier: 'Basic',
@@ -144,6 +152,8 @@ const DEMO_MEMBERS: DemoMember[] = [
     email: 'sofia@woodcarvers.example',
     phone: '+39-555-0133',
     address: 'Via Roma 8',
+    city: 'Brescia',
+    postalCode: '25121',
     state: 'IT-25',
     country: 'IT',
     tier: 'Advanced',
@@ -168,6 +178,8 @@ async function seedMembers(): Promise<void> {
       telephoneNumber1: demo.phone,
       telephoneType1: 'Mobile',
       addressLine1: demo.address,
+      city: demo.city,
+      postalCode: demo.postalCode ?? null,
       stateProvinceCode: demo.state,
       countryCode: demo.country,
       memberTierCode: demo.tier,

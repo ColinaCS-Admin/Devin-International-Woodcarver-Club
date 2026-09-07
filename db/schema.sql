@@ -87,6 +87,9 @@ CREATE TABLE member (
     telephone_type_2    telephone_type,
     address_line_1      VARCHAR(100) NOT NULL,
     address_line_2      VARCHAR(100),
+    city                VARCHAR(100) NOT NULL,
+    -- Nullable: several countries have no postal code system.
+    postal_code         VARCHAR(20),
     state_province_code VARCHAR(6) NOT NULL
         REFERENCES state_province (state_province_code),
     country_code        CHAR(2) NOT NULL REFERENCES country (country_code),

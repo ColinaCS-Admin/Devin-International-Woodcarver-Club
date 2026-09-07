@@ -14,6 +14,8 @@ export interface MemberRow {
   telephone_type_2: string | null;
   address_line_1: string;
   address_line_2: string | null;
+  city: string;
+  postal_code: string | null;
   state_province_code: string;
   state_province_desc: string;
   country_code: string;
@@ -37,6 +39,8 @@ const MEMBER_SELECT = `
          m.telephone_type_2::text AS telephone_type_2,
          m.address_line_1,
          m.address_line_2,
+         m.city,
+         m.postal_code,
          m.state_province_code,
          sp.state_province_desc,
          m.country_code,
@@ -73,6 +77,8 @@ export function toMemberDto(row: MemberRow) {
     telephoneType2: row.telephone_type_2,
     addressLine1: row.address_line_1,
     addressLine2: row.address_line_2,
+    city: row.city,
+    postalCode: row.postal_code,
     stateProvinceCode: row.state_province_code,
     stateProvinceDesc: row.state_province_desc,
     countryCode: row.country_code,
@@ -183,6 +189,8 @@ export interface MemberWriteFields {
   telephoneType2?: string | null;
   addressLine1?: string;
   addressLine2?: string | null;
+  city?: string;
+  postalCode?: string | null;
   stateProvinceCode?: string;
   countryCode?: string;
   memberTierCode?: string;
@@ -201,6 +209,8 @@ const COLUMN_BY_FIELD: Record<keyof MemberWriteFields, string> = {
   telephoneType2: 'telephone_type_2',
   addressLine1: 'address_line_1',
   addressLine2: 'address_line_2',
+  city: 'city',
+  postalCode: 'postal_code',
   stateProvinceCode: 'state_province_code',
   countryCode: 'country_code',
   memberTierCode: 'member_tier_code',
@@ -264,12 +274,13 @@ async function replaceCraftSkills(
 
 export interface CreateMemberInput extends Required<Pick<MemberWriteFields,
   'memberAlias' | 'memberFirstName' | 'memberLastName' | 'emailAddress' |
-  'telephoneNumber1' | 'telephoneType1' | 'addressLine1' | 'stateProvinceCode' |
+  'telephoneNumber1' | 'telephoneType1' | 'addressLine1' | 'city' | 'stateProvinceCode' |
   'countryCode' | 'memberTierCode'>> {
   memberMiddleName?: string | null;
   telephoneNumber2?: string | null;
   telephoneType2?: string | null;
   addressLine2?: string | null;
+  postalCode?: string | null;
   activeInd?: string;
   craftSkillCodes: string[];
   passwordHash: string;
@@ -282,10 +293,10 @@ export async function createMember(input: CreateMemberInput): Promise<MemberRow>
       `INSERT INTO woodcarver.member (
          member_alias, member_first_name, member_middle_name, member_last_name,
          email_address, telephone_number_1, telephone_type_1, telephone_number_2,
-         telephone_type_2, address_line_1, address_line_2, state_province_code,
-         country_code, member_tier_code, active_ind)
+         telephone_type_2, address_line_1, address_line_2, city, postal_code,
+         state_province_code, country_code, member_tier_code, active_ind)
        VALUES ($1, $2, $3, $4, $5, $6, $7::woodcarver.telephone_type, $8,
-               $9::woodcarver.telephone_type, $10, $11, $12, $13, $14, $15)
+               $9::woodcarver.telephone_type, $10, $11, $12, $13, $14, $15, $16, $17)
        RETURNING member_id`,
       [
         input.memberAlias,
@@ -299,6 +310,8 @@ export async function createMember(input: CreateMemberInput): Promise<MemberRow>
         input.telephoneType2 ?? null,
         input.addressLine1,
         input.addressLine2 ?? null,
+        input.city,
+        input.postalCode ?? null,
         input.stateProvinceCode,
         input.countryCode,
         input.memberTierCode,

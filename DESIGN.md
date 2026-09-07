@@ -22,7 +22,7 @@ country, with a check that the subdivision prefix matches its country), `craft_s
 Core: `member`, `member_craft_skill` (a member holds one or more craft skills), `membership_tier`, `member_discount_profile`, `member_discount`, plus the
 join table `member_discount_profile_item` (a profile bundles one or more discounts).
 
-Auth: `member_credential` (Argon2id hash, lockout counters), `app_role` (`MEMBER`, `ADMIN`),
+Auth: `member_credential` (scrypt hash, lockout counters), `app_role` (`MEMBER`, `ADMIN`),
 `member_role`, `password_reset_token` (hashed, single-use, expiring).
 
 `active_ind`: `Y` = Active, `N` = Not Active, `S` = Suspended.
@@ -38,6 +38,7 @@ that number 2 and its type are either both present or both absent.
 | `Membership_Tier.Member_Type_Code` | Omitted; undefined in the spec and redundant with `member_tier_code`. |
 | `Member_Discount` columns | `member_discount_desc`, `discount_pct`, `effective_from`, `effective_to`. |
 | `Member_Discount_Profile` columns | `member_discount_profile_desc` + items join table. |
+| `Member.City` / `Member.Postal_Code` | Added to the member address. `city` is required; `postal_code` is nullable because several countries have no postal code system. |
 | Craft skills per member | Many, via the `member_craft_skill` join table. Member Account and Member Listing show the skills as a list of `craft_skill_desc` values. |
 
 ## 3. REST API
@@ -84,7 +85,8 @@ re-checks the role on every request — the frontend guard is convenience only.
 
 ## 5. Security
 
-- Argon2id password hashing; password policy enforced server-side.
+- scrypt password hashing (self-describing encoding, swappable for Argon2id); password policy
+  enforced server-side.
 - Reset tokens stored hashed, single-use, 30-minute expiry.
 - Account lockout after repeated failed logins (`failed_attempts`, `locked_until`).
 - TLS everywhere; secrets from the cloud provider's secret manager, never in the image.

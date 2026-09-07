@@ -28,6 +28,8 @@ export const memberProfileSchema = z.object({
   telephoneType2: telephoneType.nullish(),
   addressLine1: z.string().min(1).max(100),
   addressLine2: z.string().max(100).nullish(),
+  city: z.string().min(1).max(100),
+  postalCode: z.string().max(20).nullish(),
   stateProvinceCode: z.string().regex(/^[A-Z]{2}-[A-Z0-9]{1,3}$/),
   countryCode: z.string().regex(/^[A-Z]{2}$/),
   craftSkillCodes: z.array(z.string().min(1)).min(1),

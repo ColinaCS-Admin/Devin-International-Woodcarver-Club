@@ -25,6 +25,8 @@ type EditableMember = Pick<
   | 'telephoneType2'
   | 'addressLine1'
   | 'addressLine2'
+  | 'city'
+  | 'postalCode'
   | 'stateProvinceCode'
   | 'countryCode'
 > & { craftSkillCodes: string[] };
@@ -41,6 +43,8 @@ function toEditable(member: Member): EditableMember {
     telephoneType2: member.telephoneType2,
     addressLine1: member.addressLine1,
     addressLine2: member.addressLine2,
+    city: member.city,
+    postalCode: member.postalCode,
     stateProvinceCode: member.stateProvinceCode,
     countryCode: member.countryCode,
     craftSkillCodes: member.craftSkills.map((skill) => skill.craftSkillCode),
@@ -219,6 +223,21 @@ export function MemberAccountPage() {
           <input
             value={form.addressLine2 ?? ''}
             onChange={(event) => update('addressLine2', event.target.value || null)}
+          />
+        </Field>
+
+        <Field label="City" errors={fieldErrors.city}>
+          <input
+            value={form.city}
+            onChange={(event) => update('city', event.target.value)}
+            required
+          />
+        </Field>
+
+        <Field label="Postal Code" errors={fieldErrors.postalCode}>
+          <input
+            value={form.postalCode ?? ''}
+            onChange={(event) => update('postalCode', event.target.value || null)}
           />
         </Field>
 

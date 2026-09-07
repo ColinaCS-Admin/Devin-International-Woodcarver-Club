@@ -98,6 +98,8 @@ export function MemberListingPage() {
               <th>Telephone 2</th>
               <th>Address Line 1</th>
               <th>Address Line 2</th>
+              <th>City</th>
+              <th>Postal Code</th>
               <th>State / Province</th>
               <th>Country</th>
               <th>Craft Skills</th>
@@ -124,6 +126,8 @@ export function MemberListingPage() {
                 </td>
                 <td>{member.addressLine1}</td>
                 <td>{member.addressLine2 ?? '—'}</td>
+                <td>{member.city}</td>
+                <td>{member.postalCode ?? '—'}</td>
                 <td>{member.stateProvinceDesc}</td>
                 <td>{member.countryDesc}</td>
                 <td>{member.craftSkills.map((skill) => skill.craftSkillDesc).join(', ')}</td>
