@@ -24,8 +24,8 @@ docker run -d --name woodcarver-db -p 5432:5432 \
 cd api
 cp .env.example .env
 npm install
-npm run migrate   # applies db/schema.sql
-npm run seed      # ISO 3166 reference data, craft skills, tiers, demo members
+npm run migrate   # applies db/schema.sql, then db/migrations/*.sql
+npm run seed      # ISO 3166 + ISO 639-2 reference data, craft skills, tiers, demo members
 npm run dev       # http://localhost:4000
 
 # 3. Frontend (separate terminal)
