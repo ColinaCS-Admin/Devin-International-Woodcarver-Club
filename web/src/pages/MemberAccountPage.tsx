@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { ApiError, request } from '../api/client';
 import { useMember } from '../hooks/useMember';
-import { ACTIVE_IND_LABELS, type CraftSkill, type Member } from '../types';
+import {
+  ACTIVE_IND_LABELS,
+  GENDERS,
+  type CraftSkill,
+  type Gender,
+  type Language,
+  type Member,
+} from '../types';
 
 interface Country {
   countryCode: string;
@@ -18,6 +25,8 @@ type EditableMember = Pick<
   | 'memberFirstName'
   | 'memberMiddleName'
   | 'memberLastName'
+  | 'gender'
+  | 'preferredLanguageCode'
   | 'emailAddress'
   | 'telephoneNumber1'
   | 'telephoneType1'
@@ -36,6 +45,8 @@ function toEditable(member: Member): EditableMember {
     memberFirstName: member.memberFirstName,
     memberMiddleName: member.memberMiddleName,
     memberLastName: member.memberLastName,
+    gender: member.gender,
+    preferredLanguageCode: member.preferredLanguageCode,
     emailAddress: member.emailAddress,
     telephoneNumber1: member.telephoneNumber1,
     telephoneType1: member.telephoneType1,
@@ -56,6 +67,7 @@ export function MemberAccountPage() {
   const [form, setForm] = useState<EditableMember | null>(null);
   const [countries, setCountries] = useState<Country[]>([]);
   const [stateProvinces, setStateProvinces] = useState<StateProvince[]>([]);
+  const [languages, setLanguages] = useState<Language[]>([]);
   const [skills, setSkills] = useState<CraftSkill[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -67,6 +79,7 @@ export function MemberAccountPage() {
 
   useEffect(() => {
     request<Country[]>('/countries').then(setCountries).catch(() => undefined);
+    request<Language[]>('/languages').then(setLanguages).catch(() => undefined);
     request<CraftSkill[]>('/craft-skills').then(setSkills).catch(() => undefined);
   }, []);
 
@@ -159,6 +172,19 @@ export function MemberAccountPage() {
             onChange={(event) => update('memberLastName', event.target.value)}
             required
           />
+        </Field>
+
+        <Field label="Gender" errors={fieldErrors.gender}>
+          <select
+            value={form.gender}
+            onChange={(event) => update('gender', event.target.value as Gender)}
+          >
+            {GENDERS.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
         </Field>
 
         <Field label="Email Address" errors={fieldErrors.emailAddress}>
@@ -270,6 +296,20 @@ export function MemberAccountPage() {
                 value={stateProvince.stateProvinceCode}
               >
                 {stateProvince.stateProvinceDesc}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Preferred Language" errors={fieldErrors.preferredLanguageCode}>
+          <select
+            value={form.preferredLanguageCode ?? ''}
+            onChange={(event) => update('preferredLanguageCode', event.target.value || null)}
+          >
+            <option value="">No preference</option>
+            {languages.map((language) => (
+              <option key={language.languageCode} value={language.languageCode}>
+                {language.languageDesc}
               </option>
             ))}
           </select>

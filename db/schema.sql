@@ -26,6 +26,19 @@ CREATE TABLE state_province (
 
 CREATE INDEX state_province_country_code_idx ON state_province (country_code);
 
+-- ISO 639-2 languages, loaded from an ISO 639 data store.
+-- language_code holds the bibliographic (639-2/B) code, which is the form used by
+-- MARC and HTTP Accept-Language; the terminologic (639-2/T) code is carried
+-- alongside it for the ~20 languages where the two differ (e.g. ger/deu).
+CREATE TABLE language (
+    language_code   CHAR(3) PRIMARY KEY CHECK (language_code ~ '^[a-z]{3}$'),
+    language_desc   VARCHAR(100) NOT NULL,
+    -- ISO 639-2/T, NULL when it is identical to the bibliographic code.
+    language_code_t CHAR(3) CHECK (language_code_t ~ '^[a-z]{3}$'),
+    -- ISO 639-1 alpha-2, NULL for the languages 639-1 does not cover.
+    language_code_1 CHAR(2) UNIQUE CHECK (language_code_1 ~ '^[a-z]{2}$')
+);
+
 CREATE TABLE craft_skill (
     craft_skill_code VARCHAR(20) PRIMARY KEY,
     craft_skill_desc VARCHAR(100) NOT NULL
@@ -74,12 +87,17 @@ CREATE TABLE membership_tier (
 
 CREATE TYPE telephone_type AS ENUM ('Mobile', 'Landline');
 
+CREATE TYPE gender AS ENUM ('Male', 'Female', 'Do Not Wish To Disclose');
+
 CREATE TABLE member (
     member_id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     member_alias        VARCHAR(50) NOT NULL UNIQUE,
     member_first_name   VARCHAR(50) NOT NULL,
     member_middle_name  VARCHAR(50),
     member_last_name    VARCHAR(50) NOT NULL,
+    -- 'Do Not Wish To Disclose' is the answer for a member who declines, so the
+    -- column is never NULL.
+    gender              gender NOT NULL DEFAULT 'Do Not Wish To Disclose',
     email_address       VARCHAR(254) NOT NULL UNIQUE,
     telephone_number_1  VARCHAR(20) NOT NULL,
     telephone_type_1    telephone_type NOT NULL,
@@ -93,6 +111,8 @@ CREATE TABLE member (
     state_province_code VARCHAR(6) NOT NULL
         REFERENCES state_province (state_province_code),
     country_code        CHAR(2) NOT NULL REFERENCES country (country_code),
+    -- Nullable: an unset preference means the application default language.
+    preferred_language_code CHAR(3) REFERENCES language (language_code),
     member_tier_code    VARCHAR(10) NOT NULL REFERENCES membership_tier (member_tier_code),
     -- Y = Active, N = Not Active, S = Suspended
     active_ind          CHAR(1) NOT NULL DEFAULT 'Y'
@@ -106,6 +126,7 @@ CREATE TABLE member (
 CREATE INDEX member_last_name_idx ON member (member_last_name);
 CREATE INDEX member_tier_code_idx ON member (member_tier_code);
 CREATE INDEX member_country_code_idx ON member (country_code);
+CREATE INDEX member_preferred_language_code_idx ON member (preferred_language_code);
 
 -- A member holds one or more craft skills.
 CREATE TABLE member_craft_skill (

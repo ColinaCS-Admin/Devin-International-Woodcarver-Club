@@ -16,11 +16,16 @@ export function parse<T extends z.ZodTypeAny>(schema: T, data: unknown): z.infer
 
 export const telephoneType = z.enum(['Mobile', 'Landline']);
 export const activeInd = z.enum(['Y', 'N', 'S']);
+export const gender = z.enum(['Male', 'Female', 'Do Not Wish To Disclose']);
+// ISO 639-2 bibliographic code.
+export const languageCode = z.string().regex(/^[a-z]{3}$/);
 
 export const memberProfileSchema = z.object({
   memberFirstName: z.string().min(1).max(50),
   memberMiddleName: z.string().max(50).nullish(),
   memberLastName: z.string().min(1).max(50),
+  gender,
+  preferredLanguageCode: languageCode.nullish(),
   emailAddress: z.string().email().max(254),
   telephoneNumber1: z.string().min(3).max(20),
   telephoneType1: telephoneType,

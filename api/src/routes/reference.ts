@@ -7,20 +7,27 @@ export const referenceRouter = Router();
 
 referenceRouter.use(authenticate);
 
-referenceRouter.get(
-  '/countries',
-  asyncHandler(async (_req, res) => {
-    const result = await query<{ country_code: string; country_desc: string }>(
-      'SELECT country_code, country_desc FROM woodcarver.country ORDER BY country_desc',
-    );
-    res.json(
-      result.rows.map((row) => ({
-        countryCode: row.country_code,
-        countryDesc: row.country_desc,
-      })),
-    );
-  }),
-);
+// The reference tables all follow the same <name>_code / <name>_desc shape, so a
+// lookup endpoint only needs the table name and the camelCase keys to emit.
+function lookup(path: string, table: string, codeKey: string, descKey: string): void {
+  const codeColumn = `${table}_code`;
+  const descColumn = `${table}_desc`;
+  referenceRouter.get(
+    path,
+    asyncHandler(async (_req, res) => {
+      const result = await query<Record<string, string>>(
+        `SELECT ${codeColumn}, ${descColumn} FROM woodcarver.${table} ORDER BY ${descColumn}`,
+      );
+      res.json(
+        result.rows.map((row) => ({ [codeKey]: row[codeColumn], [descKey]: row[descColumn] })),
+      );
+    }),
+  );
+}
+
+lookup('/countries', 'country', 'countryCode', 'countryDesc');
+lookup('/languages', 'language', 'languageCode', 'languageDesc');
+lookup('/craft-skills', 'craft_skill', 'craftSkillCode', 'craftSkillDesc');
 
 referenceRouter.get(
   '/countries/:countryCode/state-provinces',
@@ -36,21 +43,6 @@ referenceRouter.get(
       result.rows.map((row) => ({
         stateProvinceCode: row.state_province_code,
         stateProvinceDesc: row.state_province_desc,
-      })),
-    );
-  }),
-);
-
-referenceRouter.get(
-  '/craft-skills',
-  asyncHandler(async (_req, res) => {
-    const result = await query<{ craft_skill_code: string; craft_skill_desc: string }>(
-      'SELECT craft_skill_code, craft_skill_desc FROM woodcarver.craft_skill ORDER BY craft_skill_desc',
-    );
-    res.json(
-      result.rows.map((row) => ({
-        craftSkillCode: row.craft_skill_code,
-        craftSkillDesc: row.craft_skill_desc,
       })),
     );
   }),

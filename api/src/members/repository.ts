@@ -7,6 +7,9 @@ export interface MemberRow {
   member_first_name: string;
   member_middle_name: string | null;
   member_last_name: string;
+  gender: string;
+  preferred_language_code: string | null;
+  preferred_language_desc: string | null;
   email_address: string;
   telephone_number_1: string;
   telephone_type_1: string;
@@ -32,6 +35,9 @@ const MEMBER_SELECT = `
          m.member_first_name,
          m.member_middle_name,
          m.member_last_name,
+         m.gender::text AS gender,
+         m.preferred_language_code,
+         l.language_desc AS preferred_language_desc,
          m.email_address,
          m.telephone_number_1,
          m.telephone_type_1::text AS telephone_type_1,
@@ -61,6 +67,7 @@ const MEMBER_SELECT = `
     JOIN woodcarver.state_province sp ON sp.state_province_code = m.state_province_code
     JOIN woodcarver.country c ON c.country_code = m.country_code
     JOIN woodcarver.membership_tier mt ON mt.member_tier_code = m.member_tier_code
+    LEFT JOIN woodcarver.language l ON l.language_code = m.preferred_language_code
 `;
 
 export function toMemberDto(row: MemberRow) {
@@ -70,6 +77,9 @@ export function toMemberDto(row: MemberRow) {
     memberFirstName: row.member_first_name,
     memberMiddleName: row.member_middle_name,
     memberLastName: row.member_last_name,
+    gender: row.gender,
+    preferredLanguageCode: row.preferred_language_code,
+    preferredLanguageDesc: row.preferred_language_desc,
     emailAddress: row.email_address,
     telephoneNumber1: row.telephone_number_1,
     telephoneType1: row.telephone_type_1,
@@ -182,6 +192,8 @@ export interface MemberWriteFields {
   memberFirstName?: string;
   memberMiddleName?: string | null;
   memberLastName?: string;
+  gender?: string;
+  preferredLanguageCode?: string | null;
   emailAddress?: string;
   telephoneNumber1?: string;
   telephoneType1?: string;
@@ -202,6 +214,8 @@ const COLUMN_BY_FIELD: Record<keyof MemberWriteFields, string> = {
   memberFirstName: 'member_first_name',
   memberMiddleName: 'member_middle_name',
   memberLastName: 'member_last_name',
+  gender: 'gender',
+  preferredLanguageCode: 'preferred_language_code',
   emailAddress: 'email_address',
   telephoneNumber1: 'telephone_number_1',
   telephoneType1: 'telephone_type_1',
@@ -217,7 +231,35 @@ const COLUMN_BY_FIELD: Record<keyof MemberWriteFields, string> = {
   activeInd: 'active_ind',
 };
 
-const ENUM_COLUMNS = new Set(['telephone_type_1', 'telephone_type_2']);
+// Enum-typed columns need an explicit cast because parameters arrive as text.
+const ENUM_TYPE_BY_COLUMN: Record<string, string> = {
+  telephone_type_1: 'woodcarver.telephone_type',
+  telephone_type_2: 'woodcarver.telephone_type',
+  gender: 'woodcarver.gender',
+};
+
+interface ColumnBinding {
+  columns: string[];
+  placeholders: string[];
+  values: unknown[];
+}
+
+// Turns the set fields into parallel column/placeholder/value lists, so the
+// insert and update statements stay in step with COLUMN_BY_FIELD.
+function bindColumns(fields: MemberWriteFields): ColumnBinding {
+  const binding: ColumnBinding = { columns: [], placeholders: [], values: [] };
+  for (const [field, column] of Object.entries(COLUMN_BY_FIELD)) {
+    const value = fields[field as keyof MemberWriteFields];
+    if (value === undefined) continue;
+    binding.columns.push(column);
+    binding.values.push(value);
+    const enumType = ENUM_TYPE_BY_COLUMN[column];
+    binding.placeholders.push(
+      `$${binding.values.length}${enumType ? `::${enumType}` : ''}`,
+    );
+  }
+  return binding;
+}
 
 export async function updateMember(
   memberId: number,
@@ -225,16 +267,8 @@ export async function updateMember(
   craftSkillCodes?: string[],
 ): Promise<MemberRow | undefined> {
   return withTransaction(async (client) => {
-    const assignments: string[] = [];
-    const values: unknown[] = [];
-
-    for (const [field, column] of Object.entries(COLUMN_BY_FIELD)) {
-      const value = fields[field as keyof MemberWriteFields];
-      if (value === undefined) continue;
-      values.push(value);
-      const cast = ENUM_COLUMNS.has(column) ? '::woodcarver.telephone_type' : '';
-      assignments.push(`${column} = $${values.length}${cast}`);
-    }
+    const { columns, placeholders, values } = bindColumns(fields);
+    const assignments = columns.map((column, index) => `${column} = ${placeholders[index]}`);
 
     if (assignments.length > 0) {
       values.push(memberId);
@@ -273,10 +307,11 @@ async function replaceCraftSkills(
 }
 
 export interface CreateMemberInput extends Required<Pick<MemberWriteFields,
-  'memberAlias' | 'memberFirstName' | 'memberLastName' | 'emailAddress' |
+  'memberAlias' | 'memberFirstName' | 'memberLastName' | 'gender' | 'emailAddress' |
   'telephoneNumber1' | 'telephoneType1' | 'addressLine1' | 'city' | 'stateProvinceCode' |
   'countryCode' | 'memberTierCode'>> {
   memberMiddleName?: string | null;
+  preferredLanguageCode?: string | null;
   telephoneNumber2?: string | null;
   telephoneType2?: string | null;
   addressLine2?: string | null;
@@ -289,43 +324,25 @@ export interface CreateMemberInput extends Required<Pick<MemberWriteFields,
 
 export async function createMember(input: CreateMemberInput): Promise<MemberRow> {
   return withTransaction(async (client) => {
+    const { craftSkillCodes, passwordHash, roles, ...fields } = input;
+    const { columns, placeholders, values } = bindColumns({
+      ...fields,
+      activeInd: fields.activeInd ?? 'Y',
+    });
     const inserted = await client.query<{ member_id: string }>(
-      `INSERT INTO woodcarver.member (
-         member_alias, member_first_name, member_middle_name, member_last_name,
-         email_address, telephone_number_1, telephone_type_1, telephone_number_2,
-         telephone_type_2, address_line_1, address_line_2, city, postal_code,
-         state_province_code, country_code, member_tier_code, active_ind)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::woodcarver.telephone_type, $8,
-               $9::woodcarver.telephone_type, $10, $11, $12, $13, $14, $15, $16, $17)
+      `INSERT INTO woodcarver.member (${columns.join(', ')})
+       VALUES (${placeholders.join(', ')})
        RETURNING member_id`,
-      [
-        input.memberAlias,
-        input.memberFirstName,
-        input.memberMiddleName ?? null,
-        input.memberLastName,
-        input.emailAddress,
-        input.telephoneNumber1,
-        input.telephoneType1,
-        input.telephoneNumber2 ?? null,
-        input.telephoneType2 ?? null,
-        input.addressLine1,
-        input.addressLine2 ?? null,
-        input.city,
-        input.postalCode ?? null,
-        input.stateProvinceCode,
-        input.countryCode,
-        input.memberTierCode,
-        input.activeInd ?? 'Y',
-      ],
+      values,
     );
 
     const memberId = Number(inserted.rows[0]?.member_id);
-    await replaceCraftSkills(client, memberId, input.craftSkillCodes);
+    await replaceCraftSkills(client, memberId, craftSkillCodes);
     await client.query(
       `INSERT INTO woodcarver.member_credential (member_id, password_hash) VALUES ($1, $2)`,
-      [memberId, input.passwordHash],
+      [memberId, passwordHash],
     );
-    for (const role of input.roles ?? ['MEMBER']) {
+    for (const role of roles ?? ['MEMBER']) {
       await client.query(
         `INSERT INTO woodcarver.member_role (member_id, role_code) VALUES ($1, $2)
          ON CONFLICT DO NOTHING`,

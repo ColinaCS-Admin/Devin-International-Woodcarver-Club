@@ -1,4 +1,5 @@
 import { iso31661, iso31662 } from 'iso-3166';
+import { iso6393 } from 'iso-639-3';
 import { hashPassword } from '../auth/password.js';
 import { pool } from '../db.js';
 import { createMember } from '../members/repository.js';
@@ -55,6 +56,27 @@ async function seedReferenceData(): Promise<void> {
     );
   }
 
+  // Every ISO 639-3 entry that also carries an ISO 639-2 code, keyed by the
+  // bibliographic code. The 639-2 collective codes (e.g. 'sla' for the Slavic
+  // languages) and the special codes ('mul', 'und', 'zxx') are left out: they
+  // are not meaningful as a member's preferred language.
+  for (const language of iso6393) {
+    if (!language.iso6392B) continue;
+    await pool.query(
+      `INSERT INTO woodcarver.language (language_code, language_desc, language_code_t, language_code_1)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (language_code) DO UPDATE SET language_desc = EXCLUDED.language_desc,
+                                                language_code_t = EXCLUDED.language_code_t,
+                                                language_code_1 = EXCLUDED.language_code_1`,
+      [
+        language.iso6392B,
+        language.name,
+        language.iso6392T === language.iso6392B ? null : (language.iso6392T ?? null),
+        language.iso6391 ?? null,
+      ],
+    );
+  }
+
   for (const [code, desc] of CRAFT_SKILLS) {
     await pool.query(
       `INSERT INTO woodcarver.craft_skill (craft_skill_code, craft_skill_desc) VALUES ($1, $2)
@@ -87,6 +109,8 @@ interface DemoMember {
   first: string;
   middle?: string;
   last: string;
+  gender: 'Male' | 'Female' | 'Do Not Wish To Disclose';
+  language?: string;
   email: string;
   phone: string;
   address: string;
@@ -105,6 +129,8 @@ const DEMO_MEMBERS: DemoMember[] = [
     alias: 'admin',
     first: 'Ada',
     last: 'Ridgeway',
+    gender: 'Female',
+    language: 'eng',
     email: 'admin@woodcarvers.example',
     phone: '+1-555-0100',
     address: '1 Guild Hall',
@@ -121,6 +147,8 @@ const DEMO_MEMBERS: DemoMember[] = [
     first: 'Bruno',
     middle: 'K',
     last: 'Havel',
+    gender: 'Male',
+    language: 'cze',
     email: 'bruno@woodcarvers.example',
     phone: '+420-555-0111',
     address: '14 Karlova',
@@ -135,6 +163,8 @@ const DEMO_MEMBERS: DemoMember[] = [
     alias: 'spoonbird',
     first: 'Mei',
     last: 'Tanaka',
+    gender: 'Female',
+    language: 'jpn',
     email: 'mei@woodcarvers.example',
     phone: '+81-555-0122',
     address: '3-2-1 Sakura',
@@ -149,6 +179,8 @@ const DEMO_MEMBERS: DemoMember[] = [
     alias: 'oakcarver',
     first: 'Sofia',
     last: 'Marino',
+    // No preferred language: exercises the nullable column and the UI fallback.
+    gender: 'Do Not Wish To Disclose',
     email: 'sofia@woodcarvers.example',
     phone: '+39-555-0133',
     address: 'Via Roma 8',
@@ -174,6 +206,8 @@ async function seedMembers(): Promise<void> {
       memberFirstName: demo.first,
       memberMiddleName: demo.middle ?? null,
       memberLastName: demo.last,
+      gender: demo.gender,
+      preferredLanguageCode: demo.language ?? null,
       emailAddress: demo.email,
       telephoneNumber1: demo.phone,
       telephoneType1: 'Mobile',

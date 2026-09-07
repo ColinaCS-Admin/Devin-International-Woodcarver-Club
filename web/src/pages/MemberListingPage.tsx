@@ -84,6 +84,8 @@ export function MemberListingPage() {
               <th>First Name</th>
               <th>Middle Name</th>
               <th>Last Name</th>
+              <th>Gender</th>
+              <th>Preferred Language</th>
               <th>Email</th>
               <th>Telephone 1</th>
               <th>Telephone 2</th>
@@ -106,6 +108,8 @@ export function MemberListingPage() {
                 <td>{member.memberFirstName}</td>
                 <td>{member.memberMiddleName ?? '—'}</td>
                 <td>{member.memberLastName}</td>
+                <td>{member.gender}</td>
+                <td>{member.preferredLanguageDesc ?? '—'}</td>
                 <td>{member.emailAddress}</td>
                 <td>
                   {member.telephoneNumber1} ({member.telephoneType1})

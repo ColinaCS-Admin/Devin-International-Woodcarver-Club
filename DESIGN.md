@@ -17,7 +17,15 @@ PostgreSQL 16 without errors.
 ## 2. Data model
 
 Reference tables: `country` (ISO 3166-1 alpha-2), `state_province` (ISO 3166-2, FK to
-country, with a check that the subdivision prefix matches its country), `craft_skill`.
+country, with a check that the subdivision prefix matches its country), `language`
+(ISO 639-2), `craft_skill`.
+
+`language.language_code` is the ISO 639-2 **bibliographic** (639-2/B) code, the form used
+by MARC and HTTP `Accept-Language`. For the ~20 languages where the terminologic
+(639-2/T) code differs — `ger`/`deu`, `cze`/`ces` and so on — the /T code is carried in
+`language_code_t`; it is NULL when the two are identical. `language_code_1` holds the
+ISO 639-1 alpha-2 code where one exists, so the SPA can emit a `lang` attribute without a
+second lookup table.
 
 Core: `member`, `member_craft_skill` (a member holds one or more craft skills), `membership_tier`, `member_discount_profile`, `member_discount`, plus the
 join table `member_discount_profile_item` (a profile bundles one or more discounts).
@@ -30,6 +38,9 @@ Auth: `member_credential` (scrypt hash, lockout counters), `app_role` (`MEMBER`,
 Phone numbers keep a paired type column (`Mobile` / `Landline`); a check constraint enforces
 that number 2 and its type are either both present or both absent.
 
+`member.gender` is the enum `Male` / `Female` / `Do Not Wish To Disclose`, and
+`member.preferred_language_code` is a nullable FK to `language`.
+
 ### Decisions made where the spec was silent
 
 | Item | Decision |
@@ -40,6 +51,10 @@ that number 2 and its type are either both present or both absent.
 | `Member_Discount_Profile` columns | `member_discount_profile_desc` + items join table. |
 | `Member.City` / `Member.Postal_Code` | Added to the member address. `city` is required; `postal_code` is nullable because several countries have no postal code system. |
 | Craft skills per member | Many, via the `member_craft_skill` join table. Member Account and Member Listing show the skills as a list of `craft_skill_desc` values. |
+| `Member.Gender` | Postgres enum rather than a reference table: the value set is fixed by the spec. `NOT NULL DEFAULT 'Do Not Wish To Disclose'` — declining is itself one of the three answers, so the column never needs to be NULL. |
+| `Member.Preferred_Language_Code` | Nullable FK to `language`; an unset preference means "use the application default" rather than a sentinel row. |
+| ISO 639-2 /B vs /T | `language_code` is the bibliographic code, with the terminologic and 639-1 codes as secondary columns. |
+| 639-2 collective codes | Not loaded. `sla` (Slavic languages), `mul`, `und` and `zxx` are not meaningful as a person's preferred language; the nullable column covers "no preference". |
 
 ## 3. REST API
 
@@ -61,6 +76,7 @@ refresh token in an HttpOnly, Secure, SameSite=Strict cookie).
 | PATCH | `/members/{id}` | admin | Update member, including `activeInd` (the listing-page dropdown). |
 | GET | `/countries` | member | Reference data for dropdowns. |
 | GET | `/countries/{code}/state-provinces` | member | Subdivisions for a country. |
+| GET | `/languages` | member | ISO 639-2 languages for the preferred-language dropdown. |
 | GET | `/craft-skills` | member | Reference data. |
 | GET | `/membership-tiers` | member | Reference data. |
 
@@ -73,9 +89,9 @@ per-field list. Login and forgot-password are rate-limited per IP and per identi
 - **Forgot Password** — Email or Member Alias, Submit; always shows the same confirmation.
 - **Member Home** — the member's craft and skill information.
 - **Member Account** — read/edit of the member's own record: ID, alias, first/middle/last
-  name, email, both telephone numbers, both address lines, state/province, country,
-  craft skill descriptions (multi-select), tier description, active indicator (read-only to
-  the member).
+  name, gender, email, both telephone numbers, both address lines, state/province, country,
+  preferred language, craft skill descriptions (multi-select), tier description, active
+  indicator (read-only to the member).
 - **Member Listing** (admin only) — table of all members with the same columns plus a
   per-row dropdown to change `active_ind` (Active / Not Active / Suspended), calling
   `PATCH /members/{id}`. Server-side pagination, sorting and filtering.
@@ -98,6 +114,10 @@ re-checks the role on every request — the frontend guard is convenience only.
 `country` and `state_province` are populated from an ISO 3166 data store (e.g. the
 `iso-3166`/`iso-3166-2` datasets) by an idempotent seed job run at deploy time, upserting
 by code so subdivisions renamed upstream are corrected without breaking member FKs.
+
+`language` is loaded the same way from the `iso-639-3` dataset, keeping every entry that
+carries an ISO 639-2 code (420 languages) and skipping the 639-2 collective and special
+codes.
 
 ## 7. Open questions
 

@@ -6,6 +6,8 @@ const validMember = {
   memberAlias: 'chisel_jane',
   memberFirstName: 'Jane',
   memberLastName: 'Oakes',
+  gender: 'Female',
+  preferredLanguageCode: 'eng',
   emailAddress: 'jane@woodcarvers.example',
   telephoneNumber1: '+1-555-0101',
   telephoneType1: 'Mobile',
@@ -32,6 +34,25 @@ describe('createMemberSchema', () => {
 
   it('requires a city', () => {
     expect(() => parse(createMemberSchema, { ...validMember, city: '' })).toThrow(HttpError);
+  });
+
+  it('rejects a gender outside the permitted values', () => {
+    expect(() => parse(createMemberSchema, { ...validMember, gender: 'Unspecified' })).toThrow(
+      HttpError,
+    );
+  });
+
+  it('accepts a member with no preferred language', () => {
+    expect(
+      parse(createMemberSchema, { ...validMember, preferredLanguageCode: null })
+        .preferredLanguageCode,
+    ).toBeNull();
+  });
+
+  it('rejects an ISO 639-1 code in the preferred language field', () => {
+    expect(() =>
+      parse(createMemberSchema, { ...validMember, preferredLanguageCode: 'en' }),
+    ).toThrow(HttpError);
   });
 
   it('requires at least one craft skill', () => {

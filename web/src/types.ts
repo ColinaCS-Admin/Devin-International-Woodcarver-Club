@@ -3,12 +3,25 @@ export interface CraftSkill {
   craftSkillDesc: string;
 }
 
+/** ISO 639-2 language; languageCode is the bibliographic (639-2/B) code. */
+export interface Language {
+  languageCode: string;
+  languageDesc: string;
+}
+
+export const GENDERS = ['Male', 'Female', 'Do Not Wish To Disclose'] as const;
+
+export type Gender = (typeof GENDERS)[number];
+
 export interface Member {
   memberId: number;
   memberAlias: string;
   memberFirstName: string;
   memberMiddleName: string | null;
   memberLastName: string;
+  gender: Gender;
+  preferredLanguageCode: string | null;
+  preferredLanguageDesc: string | null;
   emailAddress: string;
   telephoneNumber1: string;
   telephoneType1: string;
